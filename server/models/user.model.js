@@ -94,3 +94,7 @@ const User = mongoose.model("User", userSchema);
 
 // Xuất model "User" để sử dụng ở các nơi khác
 export default User;
+
+
+//Schema (trong ngữ cảnh cơ sở dữ liệu và lập trình) 
+// là một bản thiết kế hoặc định nghĩa cấu trúc cho dữ liệu
