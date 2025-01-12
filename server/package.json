@@ -1,0 +1,37 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "strat": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "author": "chuongminh32",
+  "license": "ISC",
+  "description": "",
+  "_comments": {
+    "bcryptjs": "Dùng để mã hóa mật khẩu nhằm bảo mật dữ liệu người dùng.",
+    "cookie-parser": "Dùng để phân tích và xử lý cookie trong các yêu cầu HTTP.",
+    "cors": "Cho phép hoặc hạn chế các nguồn truy cập API từ các domain khác nhau.",
+    "dotenv": "Quản lý các biến môi trường từ file .env.",
+    "express": "Framework backend phổ biến để xây dựng API và ứng dụng web.",
+    "helmet": "Tăng cường bảo mật ứng dụng bằng cách cấu hình các HTTP header.",
+    "jsonwebtoken": "Dùng để tạo và xác thực JSON Web Token (JWT).",
+    "mongoose": "ODM cho MongoDB, giúp quản lý cơ sở dữ liệu dễ dàng hơn.",
+    "morgan": "Middleware để ghi log các yêu cầu HTTP đến server."
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.4",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.9"
+  }
+}
