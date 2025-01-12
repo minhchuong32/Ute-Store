@@ -2,6 +2,8 @@ import UserModel from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
 import sendEmail from "../config/semdEmail.js";
 import verifyEmailTemplate from "../utils/verifyEmailTemplate.js";
+import generatedAccessToken from "../utils/generatedAccessToken.js";
+import generatedRefreshToken from "../utils/generatedRefreshToken.js";
 
 // Hàm đăng ký người dùng
 export async function registerUserController(request, response) {
@@ -43,7 +45,7 @@ export async function registerUserController(request, response) {
 
         // Tạo người dùng mới từ payload và lưu vào cơ sở dữ liệu
         const newUser = new UserModel(payload);
-        const save = await newUser.save(); 
+        const save = await newUser.save();
 
         // Tạo URL xác minh email, sử dụng ID người dùng vừa lưu để tạo mã xác thực
         const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${save?._id}`;
@@ -80,7 +82,7 @@ export async function registerUserController(request, response) {
 // Hàm xác thực email người dùng
 export async function verifyEmailController(request, response) {
     try {
-        // Lấy mã xác thực 
+        // Lấy mã xác thực
         const { code } = request.body;
 
         // Kiểm tra xem mã xác thực có tồn tại hay không
@@ -116,6 +118,107 @@ export async function verifyEmailController(request, response) {
             success: true,
             error: false,
             data: save,
+        });
+    } catch (error) {
+        // Xử lý lỗi nếu có bất kỳ ngoại lệ nào xảy ra trong quá trình
+        console.error(error); // In lỗi ra console
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
+        });
+    }
+}
+
+// Hàm đăng nhập người dùng
+export async function loginUserController(request, response) {
+    try {
+        // Lấy dữ liệu người dùng từ request body (email, mật khẩu)
+        const { email, password } = request.body;
+
+        // Kiểm tra xem người dùng đã cung cấp đầy đủ thông tin chưa
+        if (!email || !password) {
+            return response.status(400).json({
+                message: "Vui lòng điền đầy đủ thông tin",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Tìm người dùng theo email trong cơ sở dữ liệu
+        const user = await UserModel.findOne({ email });
+
+        // Kiểm tra xem người dùng có tồn tại hay không
+        if (!user) {
+            return response.status(404).json({
+                message: "Email không tồn tại",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Kiểm tra xem người dùng đã xác thực email chưa
+        if (!user.verify_email) {
+            return response.status(400).json({
+                message: "Vui lòng xác thực email trước khi đăng nhập",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Kiểm tra xem tài khoản người dùng có bị vô hiệu hóa hay không
+        if (user.status === "Inactive") {
+            return response.status(400).json({
+                message: "Tài khoản của bạn đã bị vô hiệu hóa",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Kiểm tra xem tài khoản người dùng có bị tạm ngưng hay không
+        if (user.status === "Suspended") {
+            return response.status(400).json({
+                message: "Tài khoản của bạn đã bị tạm ngưng",
+                success: false,
+                error: true,
+            });
+        }
+
+        if (user.status === "Active") {
+            // Cập nhật ngày đăng nhập lần cuối của người dùng
+            user.last_login_date = new Date();
+            await user.save();
+        }
+
+        // Kiểm tra xem mật khẩu người dùng có khớp với mật khẩu đã mã hóa trong cơ sở dữ liệu hay không
+        const checkPass = await bcryptjs.compare(password, user.password);
+
+        // Nếu mật khẩu không khớp, trả về thông báo lỗi
+        if (!checkPass) {
+            return response.status(400).json({
+                message: "Mật khẩu không chính xác",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Tạo mã token truy cập và làm mới
+        const accessToken = await generatedAccessToken(user._id);
+        const refreshToken = await generatedRefreshToken(user._id);
+        const cookiesOption = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None",
+        }
+        response.cookie("accessToken", accessToken, cookiesOption);
+        response.cookie("refreshToken", refreshToken, cookiesOption);
+
+        // Trả về phản hồi thành công cho người dùng
+        return response.json({
+            message: "Đăng nhập thành công",
+            success: true,
+            error: false,
+            data: user,
         });
     } catch (error) {
         // Xử lý lỗi nếu có bất kỳ ngoại lệ nào xảy ra trong quá trình
