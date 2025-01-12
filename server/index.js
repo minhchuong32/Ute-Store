@@ -28,8 +28,9 @@ app.get("/", (reques, response) => {
     response.json({ message: "Hello from server " + PORT });
 });
 
-connectDB();
+connectDB().then(() => {    
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+})
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
