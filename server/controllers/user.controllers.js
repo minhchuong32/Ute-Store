@@ -3,6 +3,7 @@ import bcryptjs from "bcryptjs";
 import sendEmail from "../config/semdEmail.js";
 import verifyEmailTemplate from "../utils/verifyEmailTemplate.js";
 
+// Hàm đăng ký người dùng
 export async function registerUserController(request, response) {
     try {
         // Lấy dữ liệu người dùng từ request body (tên, email, mật khẩu)
@@ -72,6 +73,57 @@ export async function registerUserController(request, response) {
             message: "Đã có lỗi xảy ra. Vui lòng thử lại sau", // Thông báo lỗi chung
             success: false, // Trạng thái không thành công
             error: true, // Cờ lỗi
+        });
+    }
+}
+
+// Hàm xác thực email người dùng
+export async function verifyEmailController(request, response) {
+    try {
+        // Lấy mã xác thực 
+        const { code } = request.body;
+
+        // Kiểm tra xem mã xác thực có tồn tại hay không
+        if (!code) {
+            return response.status(400).json({
+                message: "Mã xác thực không hợp lệ",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Tìm người dùng theo ID trong cơ sở dữ liệu: xac thuc email
+        const user = await UserModel.findById(code);
+
+        // Kiểm tra xem người dùng có tồn tại hay không
+        if (!user) {
+            return response.status(404).json({
+                message: "Không tìm thấy người dùng",
+                success: false,
+                error: true,
+            });
+        }
+
+        // Cập nhật trạng thái xác thực email của người dùng thành true
+        user.verify_email = true;
+
+        // Lưu thông tin người dùng đã cập nhật
+        const save = await user.save();
+
+        // Trả về phản hồi thành công cho người dùng
+        return response.json({
+            message: "Xác thực email thành công",
+            success: true,
+            error: false,
+            data: save,
+        });
+    } catch (error) {
+        // Xử lý lỗi nếu có bất kỳ ngoại lệ nào xảy ra trong quá trình
+        console.error(error); // In lỗi ra console
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
         });
     }
 }
