@@ -230,3 +230,40 @@ export async function loginUserController(request, response) {
         });
     }
 }
+
+// Hàm đăng xuất người dùng 
+export async function logoutUserController(request, response) {
+    try {
+
+
+
+        const cookiesOption = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None",
+        }
+
+        response.clearCookie("accessToken", cookiesOption);
+        response.clearCookie("refreshToken", cookiesOption);
+        
+        const removeRefreshToken = await UserModel.findByIdAndUpdate(request.userId, {
+            refresh_token : ""
+        })
+
+        return response.json({
+            message: "Đăng xuất thành công",
+            success: true,
+            error: false,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
+        });
+    }
+}
+
+
