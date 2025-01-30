@@ -210,7 +210,7 @@ export async function loginUserController(request, response) {
             httpOnly: true,
             secure: true,
             sameSite: "None",
-        }
+        };
         response.cookie("accessToken", accessToken, cookiesOption);
         response.cookie("refreshToken", refreshToken, cookiesOption);
 
@@ -232,32 +232,28 @@ export async function loginUserController(request, response) {
     }
 }
 
-// Hàm đăng xuất người dùng 
+// Hàm đăng xuất người dùng
 export async function logoutUserController(request, response) {
     try {
-
-
-
         const cookiesOption = {
             httpOnly: true,
             secure: true,
             sameSite: "None",
-        }
+        };
 
         response.clearCookie("accessToken", cookiesOption);
         response.clearCookie("refreshToken", cookiesOption);
-        
+
         const removeRefreshToken = await UserModel.findByIdAndUpdate(request.userId, {
-            refresh_token : ""
-        })
+            refresh_token: "",
+        });
 
         return response.json({
             message: "Đăng xuất thành công",
             success: true,
             error: false,
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error(error);
         return response.status(500).json({
             message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
@@ -281,18 +277,18 @@ export async function uploadAvatarController(request, response) {
 
         // Cập nhật thông tin người dùng trong cơ sở dữ liệu với link avatar mới
         const updateUser = await UserModel.findByIdAndUpdate(userId, {
-            avatar: upload.url // Lưu URL của hình ảnh đã tải lên
+            avatar: upload.url, // Lưu URL của hình ảnh đã tải lên
         });
 
         // Trả về phản hồi thành công với thông tin cập nhật
         return response.json({
             message: "Tải ảnh thành công", // Thông báo cho người dùng
-            success: true,                 // Trạng thái thành công
-            error: false,                  // Không có lỗi
+            success: true, // Trạng thái thành công
+            error: false, // Không có lỗi
             data: {
-                _id: userId,               // ID của người dùng
-                avatar: upload.url,        // Link ảnh đại diện mới
-            }
+                _id: userId, // ID của người dùng
+                avatar: upload.url, // Link ảnh đại diện mới
+            },
         });
     } catch (error) {
         // Ghi lại lỗi để kiểm tra nếu có sự cố xảy ra
@@ -301,9 +297,43 @@ export async function uploadAvatarController(request, response) {
         // Trả về phản hồi lỗi cho client
         return response.status(500).json({
             message: "Đã có lỗi xảy ra. Vui lòng thử lại sau", // Thông báo lỗi
-            success: false,                                   // Trạng thái thất bại
-            error: true,                                      // Đánh dấu có lỗi
+            success: false, // Trạng thái thất bại
+            error: true, // Đánh dấu có lỗi
         });
     }
 }
 
+// Cập nhật chi tiết thông tin người dùng
+export async function updateUserDetails(request, responsive) {
+    try {
+        const userId = request.userId; // Lấy userId từ request
+        const { name, email, mobile, password } = request.body; // Lấy thông tin người dùng từ request body
+
+        let hashPassword = "";
+        if (password) {
+            const salt = await bcryptjs.genSalt(10);
+            hashPassword = await bcryptjs.hash(password, salt);
+        }
+
+        const updateUser = await UserModel.updateOne({_id : userId}, {
+            ...(name && { name: name }),
+            ...(email && { email: email }),
+            ...(mobile && { mobile: mobile }),
+            ...(password && { password: hashPassword }),
+        });
+
+        return responsive.json({
+            message: "Cập nhật thông tin thành công",
+            success: true,
+            error: false,
+            data: updateUser,
+        });
+    } catch (error) {
+        console.error(error);
+        return responsive.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
+        });
+    }
+}
