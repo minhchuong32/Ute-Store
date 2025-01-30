@@ -4,6 +4,7 @@ import sendEmail from "../config/semdEmail.js";
 import verifyEmailTemplate from "../utils/verifyEmailTemplate.js";
 import generatedAccessToken from "../utils/generatedAccessToken.js";
 import generatedRefreshToken from "../utils/generatedRefreshToken.js";
+import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
 
 // Hàm đăng ký người dùng
 export async function registerUserController(request, response) {
@@ -266,4 +267,43 @@ export async function logoutUserController(request, response) {
     }
 }
 
+// Định nghĩa hàm controller để xử lý việc tải ảnh đại diện
+export async function uploadAvatarController(request, response) {
+    try {
+        // Lấy userId từ request (được truyền khi người dùng đăng nhập)
+        const userId = request.userId;
+
+        // Lấy file hình ảnh từ request (được tải lên từ client)
+        const image = request.file;
+
+        // Gọi hàm uploadImageCloudinary để tải hình ảnh lên Cloudinary
+        const upload = await uploadImageCloudinary(image);
+
+        // Cập nhật thông tin người dùng trong cơ sở dữ liệu với link avatar mới
+        const updateUser = await UserModel.findByIdAndUpdate(userId, {
+            avatar: upload.url // Lưu URL của hình ảnh đã tải lên
+        });
+
+        // Trả về phản hồi thành công với thông tin cập nhật
+        return response.json({
+            message: "Tải ảnh thành công", // Thông báo cho người dùng
+            success: true,                 // Trạng thái thành công
+            error: false,                  // Không có lỗi
+            data: {
+                _id: userId,               // ID của người dùng
+                avatar: upload.url,        // Link ảnh đại diện mới
+            }
+        });
+    } catch (error) {
+        // Ghi lại lỗi để kiểm tra nếu có sự cố xảy ra
+        console.error(error);
+
+        // Trả về phản hồi lỗi cho client
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau", // Thông báo lỗi
+            success: false,                                   // Trạng thái thất bại
+            error: true,                                      // Đánh dấu có lỗi
+        });
+    }
+}
 
