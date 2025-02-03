@@ -5,6 +5,8 @@ import verifyEmailTemplate from "../utils/verifyEmailTemplate.js";
 import generatedAccessToken from "../utils/generatedAccessToken.js";
 import generatedRefreshToken from "../utils/generatedRefreshToken.js";
 import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
+import generatedOtp from "../utils/generatedOtp.js";
+import forgotPasswordTemplate from "../utils/forgotPasswordTemplate.js";
 
 // Hàm đăng ký người dùng
 export async function registerUserController(request, response) {
@@ -336,4 +338,167 @@ export async function updateUserDetails(request, responsive) {
             error: true,
         });
     }
+}
+
+// Quên mật khẩu 
+export async function forgotPasswordController(request, response) {
+    try {
+        const { email } = request.body;
+
+        const user = await UserModel.findOne({ email });
+
+        if(!user) {
+            return response.status(404).json({
+                message: "Email không tồn tại",
+                success: false,
+                error: true,
+            });
+        }
+
+        const otp = generatedOtp();
+        const expireTime = new Date() + 60 * 60 * 1000 // 1hr
+        
+        const update = await UserModel.findByIdAndUpdate(user._id, {
+            forgot_password_otp : otp,
+            forgot_password_expire : new Date(expireTime).toISOString(),
+        })
+
+        await sendEmail({
+            sendTo: email,
+            subject: "Forgot Password from UteStore",
+            html: forgotPasswordTemplate({
+                name : user.name,
+                otp : otp
+            }) 
+        })
+
+        return response.json({
+            message : "Mã OTP đã được gửi đến email của bạn",
+            success: true,
+            error: false,
+        })
+    }
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
+        });
+    }
+}
+
+// Xác thực mã OTP
+export async function verifyOtpController(request, response) {
+    try {
+        const { email, otp } = request.body;
+        
+        if (!otp || !email) {
+            return response.status(400).json({
+                message: "Vui lòng điền đầy đủ thông tin",
+                success: false,
+                error: true,
+            });
+        }
+
+        const user = await UserModel.findOne({ email });
+
+        if(!user) {
+            return response.status(404).json({
+                message: "Email không tồn tại",
+                success: false,
+                error: true,
+            });
+        }
+
+        if(user.forgot_password_otp !== otp) {
+            return response.status(400).json({
+                message: "Mã OTP không chính xác",
+                success: false,
+                error: true,
+            });
+        }
+
+        const currentTime = new Date();
+
+        if(currentTime > user.forgot_password_expiry) {
+            return response.status(400).json({
+                message: "Mã OTP đã hết hạn",
+                success: false,
+                error: true,
+            });
+        }
+
+        return response.json({
+            message: "Xác thực mã OTP thành công",
+            success: true,
+            error: false,
+        })
+
+    }
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
+        });
+    }
+}
+
+// Đặt lại mật khẩu
+export async function resetPasswordController(request, response) {
+    try {
+        const { email, newPassword, confirmPassword } = request.body;
+
+        if(!email || !newPassword || !confirmPassword) {
+            return response.status(400).json({
+                message: "Vui lòng điền đầy đủ thông tin",
+            });
+        }
+
+        const user = await UserModel.findOne({ email });
+
+        if(!user) {
+            return response.status(404).json({
+                message: "Email không tồn tại",
+                success: false,
+                error: true,
+            });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return response.status(400).json({
+                message: "Mật khẩu không khớp",
+                success: false,
+                error: true,
+            });
+        }
+
+        const salt = await bcryptjs.genSalt(10);
+
+        const hashPassword = await bcryptjs.hash(newPassword, salt);
+
+        const update = await UserModel.findByIdAndUpdate(user._id, {
+            password : hashPassword,
+            forgot_password_otp : "",
+            forgot_password_expiry : "",
+        })
+
+        return response.json({
+            message: "Đặt lại mật khẩu thành công",
+            success: true,
+            error: false,
+        })
+
+    }
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({
+            message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+            success: false,
+            error: true,
+        });
+    }
+
 }
