@@ -7,6 +7,7 @@ import generatedRefreshToken from "../utils/generatedRefreshToken.js";
 import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
 import generatedOtp from "../utils/generatedOtp.js";
 import forgotPasswordTemplate from "../utils/forgotPasswordTemplate.js";
+import jwt from 'jsonwebtoken';
 
 // Hàm đăng ký người dùng
 export async function registerUserController(request, response) {
@@ -501,4 +502,59 @@ export async function resetPasswordController(request, response) {
         });
     }
 
+}
+
+// refresh token controller
+
+export async function refreshTokenController(request, response) {
+    try {
+        const refreshToken = request.cookies.refreshToken || request?.header?.authorization?.split("")[1];
+        
+        if (!refreshToken) {
+            return response.status(400).json({
+                message: "Token không hợp lệ",
+                success: false,
+                error: true,
+            });
+        
+        }
+
+        // 
+        const decoded = await jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
+
+        if(!decoded) {
+            return response.status(400).json({
+                message: "Token không hợp lệ",
+                success: false,
+                error: true,
+            });
+        }
+
+        const userId = decoded?._id;
+
+        const newAccessToken = await generatedAccessToken(userId); ;
+
+        response.cookie("accessToken", newAccessToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None",
+        });
+
+        return response.json({
+            message : "Refresh token thành công",
+            success: true,
+            error: false,
+            data : {
+                accessToken : newAccessToken,
+            }
+        })
+    }
+        catch(error) {
+            console.error(error);
+            return response.status(500).json({
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau",
+                success: false,
+                error: true,
+            });
+        }
 }
